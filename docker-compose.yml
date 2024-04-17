@@ -1,0 +1,30 @@
+version: "3.3"
+services:
+  web:
+    build: .
+    volumes:
+      - ./src:/var/www/html # map host directory to container directory
+    env_file:
+      - ./src/.env
+    ports:
+      - "8080:80"
+
+  db:
+    image: mysql:8
+    volumes:
+      - ./.docker/schema/:/docker-entrypoint-initdb.d
+      - ./.docker/datadir/mysql:/var/lib/mysql
+    platform: linux/amd64
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: my_database
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+
+    # Disable mysql strict mode
+    # --max_allowed_packet=1000M #256M
+    command: mysqld --sql_mode=""
+    ports:
+      # <Port exposed> : < MySQL Port running inside container>
+      - "3306:3306"
