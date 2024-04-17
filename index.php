@@ -1,13 +1,8 @@
 <?php
 session_start();
 
-require __DIR__ . '/vendor/autoload.php';
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if (isset($_POST['message'])) {
-    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
-    $dotenv->load();
-
     $message = $_POST['message'];
 
     if (!isset($_SESSION['chat_history'])) {
