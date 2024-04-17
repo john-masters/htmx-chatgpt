@@ -47,17 +47,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($response) {
       $responseData = json_decode($response, true);
       $aiMessage = $responseData['choices'][0]['message']['content'];
+      $aiRole = $responseData['choices'][0]['message']['role'];
 
-      $_SESSION['chat_history'][] = ["role" => "system", "content" => $aiMessage];
+      $_SESSION['chat_history'][] = ["role" => $aiRole, "content" => $aiMessage];
 
       foreach ($_SESSION['chat_history'] as $chatMessage) {
-        echo "<div class='response'><div class='role'><strong>" . strtoupper($chatMessage['role']) . "</strong></div><div class='message'>" . $chatMessage['content'] . "</div></div>";
+        $escapedRole = nl2br(htmlspecialchars(strtoupper($chatMessage['role']), ENT_QUOTES, 'UTF-8'));
+        $escapedContent = nl2br(htmlspecialchars($chatMessage['content'], ENT_QUOTES, 'UTF-8'));
+        echo "<div class='response'><div class='role'><strong>" . $escapedRole . "</strong></div><div class='message'>" . $escapedContent . "</div></div>";
       }
     } else {
       echo "<div>Error retrieving response from API.</div>";
     }
     die();
   }
+} else if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+  session_destroy();
 }
 ?>
 
@@ -131,13 +136,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       gap: 0.25rem;
     }
 
-
     form #input {
       border: 1px solid black;
       border-radius: 5px;
       padding: 0.25rem;
       flex: 1;
       font-size: 1rem;
+      resize: none;
+      font-family: sans-serif;
     }
 
     form #submit {
@@ -146,7 +152,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       padding: 0.25rem;
       font-size: 1rem;
     }
-
 
     #response-container {
       flex: 1;
@@ -205,7 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <h1>AI CHAT</h1>
       </li>
       <li>
-        <button hx-on:click="document.getElementById('response-container').innerHTML = ''">
+        <button hx-on:click="document.getElementById('response-container').innerHTML = ''" hx-delete="index.php" hx-swap="none">
           <span>New</span>
         </button>
       </li>
@@ -213,9 +218,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </header>
   <main>
     <section id="response-container">
+      <?php
+      if (isset($_SESSION['chat_history'])) {
+        foreach ($_SESSION['chat_history'] as $chatMessage) {
+          $escapedRole = nl2br(htmlspecialchars(strtoupper($chatMessage['role']), ENT_QUOTES, 'UTF-8'));
+          $escapedContent = nl2br(htmlspecialchars($chatMessage['content'], ENT_QUOTES, 'UTF-8'));
+          echo "<div class='response'><div class='role'><strong>" . $escapedRole . "</strong></div><div class='message'>" . $escapedContent . "</div></div>";
+        }
+      }
+      ?>
     </section>
-    <form hx-post="index.php" hx-target="#response-container" hx-swap="innerHTML" hx-on::before-request="const input = document.getElementById('input'); const submit = document.getElementById('submit'); input.disabled = true; input.value = ''; input.placeholder = 'Loading...'; submit.disabled = true;" hx-on::after-request="const input = document.getElementById('input'); const submit = document.getElementById('submit'); input.disabled = false; input.placeholder = 'Type a message'; submit.disabled = false; input.focus();">
-      <input type="text" name="message" id="input" placeholder="Type a message">
+    <form hx-post="index.php" hx-target="#response-container" hx-swap="innerHTML" hx-on::before-request="const input = document.getElementById('input');console.log(input.value); const submit = document.getElementById('submit'); input.disabled = true; input.value = ''; input.placeholder = 'Loading...'; submit.disabled = true;" hx-on::after-request="const input = document.getElementById('input'); const submit = document.getElementById('submit'); input.disabled = false; input.placeholder = 'Type a message'; submit.disabled = false; input.focus();">
+      <textarea name="message" id="input" placeholder="Type a message"></textarea>
       <button type="submit" id="submit">
         <span>Send</span>
         </div>
