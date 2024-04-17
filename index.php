@@ -51,6 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     main {
       flex: 1;
+      gap: 1rem;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -63,18 +64,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     #response-container {
+      flex: 1;
+      padding: 0.5rem;
       display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      padding: 1rem;
+      flex-direction: column-reverse;
+      gap: 0.5rem;
       width: 100%;
-      min-height: 0;
       overflow: scroll;
+      border: 1px solid black;
+      border-radius: 5px;
     }
 
     .response {
+      border: 1px solid black;
+      border-radius: 5px;
+      padding: 0.25rem;
       display: flex;
       gap: 1rem;
+    }
+
+    .response>div {
+      word-wrap: break-word;
     }
   </style>
   <title>ai chat</title>
@@ -101,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <main>
     <section id="response-container">
     </section>
-    <form hx-post=" index.php" hx-target="#response-container" hx-swap="beforeend">
+    <form hx-post=" index.php" hx-target="#response-container" hx-swap="afterbegin">
       <input type="text" name="message" id="message" placeholder="Type a message">
       <button type="submit">
         <span>Send</span>
