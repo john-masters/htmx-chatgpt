@@ -1,5 +1,18 @@
 <?php
+
 session_start();
+
+$validUser = $_ENV['USERNAME'];
+$validPassword = $_ENV['PASSWORD'];
+
+if (
+  !isset($_SERVER['PHP_AUTH_USER']) || !isset($_SERVER['PHP_AUTH_PW']) ||
+  $_SERVER['PHP_AUTH_USER'] !== $validUser || $_SERVER['PHP_AUTH_PW'] !== $validPassword
+) {
+  header('WWW-Authenticate: Basic realm="My Protected Area"');
+  header('HTTP/1.0 401 Unauthorized');
+  exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if (isset($_POST['message'])) {
