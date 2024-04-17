@@ -1,4 +1,6 @@
 <?php
+session_start();
+
 require __DIR__ . '/vendor/autoload.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -7,6 +9,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dotenv->load();
 
     $message = $_POST['message'];
+
+    if (!isset($_SESSION['chat_history'])) {
+      $_SESSION['chat_history'] = [
+        [
+          "role" => "system",
+          "content" => "You are a helpful assistant."
+        ]
+      ];
+    }
+
+    $_SESSION['chat_history'][] = ["role" => "user", "content" => $message];
+
 
     $api_key = $_ENV['OPENAI_API_KEY'];
     $api_endpoint = "https://api.openai.com/v1/chat/completions";
@@ -18,16 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $payload = json_encode([
       "model" => "gpt-4",
-      "messages" => [
-        [
-          "role" => "system",
-          "content" => "You are a helpful assistant."
-        ],
-        [
-          "role" => "user",
-          "content" => $message
-        ]
-      ]
+      "messages" => $_SESSION['chat_history']
     ]);
 
     $ch = curl_init($api_endpoint);
@@ -39,9 +44,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $response = curl_exec($ch);
     curl_close($ch);
 
-    $content = json_decode($response, true)['choices'][0]['message']['content'];
-    echo "<div class='response'><div class='role'><strong>AI</strong></div><div class='message'>" . $content . "</div></div>";
-    echo "<div class='response'><div class='role'><strong>ME</strong></div><div class='message'>" . $message . "</div></div>";
+    if ($response) {
+      $responseData = json_decode($response, true);
+      $aiMessage = $responseData['choices'][0]['message']['content'];
+
+      $_SESSION['chat_history'][] = ["role" => "system", "content" => $aiMessage];
+
+      foreach ($_SESSION['chat_history'] as $chatMessage) {
+        echo "<div class='response'><div class='role'><strong>" . strtoupper($chatMessage['role']) . "</strong></div><div class='message'>" . $chatMessage['content'] . "</div></div>";
+      }
+    } else {
+      echo "<div>Error retrieving response from API.</div>";
+    }
     die();
   }
 }
@@ -138,7 +152,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       flex: 1;
       padding: 0.5rem;
       display: flex;
-      flex-direction: column-reverse;
+      flex-direction: column;
+      /* justify-content: flex-end; */
       gap: 0.5rem;
       width: 100%;
       overflow: scroll;
@@ -190,18 +205,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <h1>AI CHAT</h1>
       </li>
       <li>
-        <a href="/">
-          <button>
-            <span>New</span>
-          </button>
-        </a>
+        <button hx-on:click="document.getElementById('response-container').innerHTML = ''">
+          <span>New</span>
+        </button>
       </li>
     </menu>
   </header>
   <main>
     <section id="response-container">
     </section>
-    <form hx-post="index.php" hx-target="#response-container" hx-swap="afterbegin" hx-on::before-request="const input = document.getElementById('input'); const submit = document.getElementById('submit'); input.disabled = true; input.value = ''; input.placeholder = 'Loading...'; submit.disabled = true;" hx-on::after-request="const input = document.getElementById('input'); const submit = document.getElementById('submit'); input.disabled = false; input.placeholder = 'Type a message'; submit.disabled = false; input.focus();">
+    <form hx-post="index.php" hx-target="#response-container" hx-swap="innerHTML" hx-on::before-request="const input = document.getElementById('input'); const submit = document.getElementById('submit'); input.disabled = true; input.value = ''; input.placeholder = 'Loading...'; submit.disabled = true;" hx-on::after-request="const input = document.getElementById('input'); const submit = document.getElementById('submit'); input.disabled = false; input.placeholder = 'Type a message'; submit.disabled = false; input.focus();">
       <input type="text" name="message" id="input" placeholder="Type a message">
       <button type="submit" id="submit">
         <span>Send</span>
