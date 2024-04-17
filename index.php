@@ -100,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       gap: 1rem;
       width: 100%;
       padding: 2rem;
-      height: 100vh;
+      height: calc(100vh - env(safe-area-inset-bottom));
       overflow: hidden;
       font-family: sans-serif;
       max-width: 1024px;
@@ -171,10 +171,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       padding: 0.5rem;
       display: flex;
       flex-direction: column;
-      /* justify-content: flex-end; */
       gap: 0.5rem;
       width: 100%;
-      overflow: scroll;
+      overflow-y: scroll;
       border: 1px solid black;
       border-radius: 5px;
     }
