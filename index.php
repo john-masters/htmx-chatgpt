@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       gap: 1rem;
       width: 100%;
       padding: 2rem;
-      height: calc(100vh - env(safe-area-inset-bottom));
+      height: 100svh;
       overflow: hidden;
       font-family: sans-serif;
       max-width: 1024px;
