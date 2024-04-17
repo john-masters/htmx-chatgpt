@@ -184,7 +184,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       border-radius: 5px;
       padding: 0.25rem;
       display: flex;
-      gap: 0.5rem;
+      flex-direction: column;
+      align-items: flex-start;
     }
 
     .role {
