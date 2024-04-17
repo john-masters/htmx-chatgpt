@@ -1,13 +1,26 @@
 <?php
+
 session_start();
 
 require __DIR__ . '/vendor/autoload.php';
 
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
+
+$validUser = $_ENV['USERNAME'];
+$validPassword = $_ENV['PASSWORD'];
+
+if (
+  !isset($_SERVER['PHP_AUTH_USER']) || !isset($_SERVER['PHP_AUTH_PW']) ||
+  $_SERVER['PHP_AUTH_USER'] !== $validUser || $_SERVER['PHP_AUTH_PW'] !== $validPassword
+) {
+  header('WWW-Authenticate: Basic realm="My Protected Area"');
+  header('HTTP/1.0 401 Unauthorized');
+  exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if (isset($_POST['message'])) {
-    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
-    $dotenv->load();
-
     $message = $_POST['message'];
 
     if (!isset($_SESSION['chat_history'])) {
