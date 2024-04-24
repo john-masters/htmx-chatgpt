@@ -163,6 +163,7 @@
             content: "You are a helpful assistant.",
           },
         ];
+        localStorage.setItem("messages", JSON.stringify(messages));
 
         updateMessages(messages);
 
@@ -181,6 +182,7 @@
             role: "user",
             content: event.target.message.value,
           });
+          localStorage.setItem("messages", JSON.stringify(messages));
 
           updateMessages(messages);
 
@@ -234,14 +236,17 @@
         });
 
         newButton.addEventListener("click", () => {
-          localStorage.removeItem("messages");
           document.querySelector("#response-container").innerHTML = "";
-          updateMessages([
+          localStorage.removeItem("messages");
+          const messages = JSON.parse(localStorage.getItem("messages")) || [
             {
               role: "system",
               content: "You are a helpful assistant.",
             },
-          ]);
+          ];
+          localStorage.setItem("messages", JSON.stringify(messages));
+
+          updateMessages(messages);
         });
       });
     </script>
