@@ -1,59 +1,77 @@
 <?php
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  if (isset($_POST['message'])) {
-    $message = $_POST['message'];
 
-    if (!isset($_SESSION['chat_history'])) {
-      $_SESSION['chat_history'] = [
-        [
-          "role" => "system",
-          "content" => "You are a helpful assistant."
-        ]
-      ];
-    }
+require __DIR__ . '/vendor/autoload.php';
 
-    $_SESSION['chat_history'][] = ["role" => "user", "content" => $message];
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
 
+$data = json_decode(file_get_contents('php://input'));
 
-    $api_key = $_ENV['OPENAI_API_KEY'];
-    $api_endpoint = "https://api.openai.com/v1/chat/completions";
+$message = $data->message;
 
-    $headers = [
-      "Content-Type: application/json",
-      "Authorization: Bearer $api_key"
-    ];
+$api_key = $_ENV['OPENAI_API_KEY'];
+$api_endpoint = "https://api.openai.com/v1/chat/completions";
 
-    $payload = json_encode([
-      "model" => "gpt-4",
-      "messages" => $_SESSION['chat_history']
-    ]);
+$headers = [
+  "Content-Type: application/json",
+  "Authorization: Bearer $api_key"
+];
 
-    $ch = curl_init($api_endpoint);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$payload = json_encode([
+  "model" => "gpt-4",
+  "messages" => [
+    [
+      "role" => "system",
+      "content" => "You are a helpful assistant."
+    ],
+    [
+      "role" => "user",
+      "content" => $message
+    ]
+  ],
+  "stream" => true
+]);
 
-    $response = curl_exec($ch);
-    curl_close($ch);
+$ch = curl_init($api_endpoint);
+curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
+header('Content-Type: text/event-stream');
+header('Cache-Control: no-cache');
 
-    if ($response) {
-      $responseData = json_decode($response, true);
-      $aiMessage = $responseData['choices'][0]['message']['content'];
-      $aiRole = $responseData['choices'][0]['message']['role'];
+curl_setopt($ch, CURLOPT_WRITEFUNCTION, function ($curl, $data) {
+  $dataArray = explode("\n\n", $data);
 
-      $_SESSION['chat_history'][] = ["role" => $aiRole, "content" => $aiMessage];
-
-      foreach ($_SESSION['chat_history'] as $chatMessage) {
-        $escapedRole = nl2br(htmlspecialchars(strtoupper($chatMessage['role']), ENT_QUOTES, 'UTF-8'));
-        $escapedContent = nl2br(htmlspecialchars($chatMessage['content'], ENT_QUOTES, 'UTF-8'));
-        echo "<div class='response'><div class='role'><strong>" . $escapedRole . "</strong></div><div class='message'>" . $escapedContent . "</div></div>";
+  foreach ($dataArray as $chunk) {
+    if ($chunk) {
+      try {
+        $jsonData = json_decode(substr($chunk, 6), true);
+        if ($jsonData && isset($jsonData['choices'][0]['delta']['content'])) {
+          $content = $jsonData['choices'][0]['delta']['content'];
+          echo $content;
+          ob_flush();
+          flush();
+        }
+        if (isset($jsonData['choices'][0]['finish_reason']) && $jsonData['choices'][0]['finish_reason'] == "stop") {
+          break;
+        }
+      } catch (Exception $e) {
+        echo "data: Failed to process chunk\n\n";
+        ob_flush();
+        flush();
       }
-    } else {
-      echo "<div>Error retrieving response from API.</div>";
     }
-    die();
   }
-} else if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
-  session_destroy();
+
+  return strlen($data);
+});
+
+$response = curl_exec($ch);
+if (curl_errno($ch)) {
+  echo 'Curl error: ' . curl_error($ch);
 }
+
+curl_close($ch);
+
+die();
