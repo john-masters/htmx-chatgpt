@@ -19,74 +19,15 @@ if (
   exit;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  if (isset($_POST['message'])) {
-    $message = $_POST['message'];
-
-    if (!isset($_SESSION['chat_history'])) {
-      $_SESSION['chat_history'] = [
-        [
-          "role" => "system",
-          "content" => "You are a helpful assistant."
-        ]
-      ];
-    }
-
-    $_SESSION['chat_history'][] = ["role" => "user", "content" => $message];
-
-
-    $api_key = $_ENV['OPENAI_API_KEY'];
-    $api_endpoint = "https://api.openai.com/v1/chat/completions";
-
-    $headers = [
-      "Content-Type: application/json",
-      "Authorization: Bearer $api_key"
-    ];
-
-    $payload = json_encode([
-      "model" => "gpt-4",
-      "messages" => $_SESSION['chat_history']
-    ]);
-
-    $ch = curl_init($api_endpoint);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-    $response = curl_exec($ch);
-    curl_close($ch);
-
-    if ($response) {
-      $responseData = json_decode($response, true);
-      $aiMessage = $responseData['choices'][0]['message']['content'];
-      $aiRole = $responseData['choices'][0]['message']['role'];
-
-      $_SESSION['chat_history'][] = ["role" => $aiRole, "content" => $aiMessage];
-
-      foreach ($_SESSION['chat_history'] as $chatMessage) {
-        $escapedRole = nl2br(htmlspecialchars(strtoupper($chatMessage['role']), ENT_QUOTES, 'UTF-8'));
-        $escapedContent = nl2br(htmlspecialchars($chatMessage['content'], ENT_QUOTES, 'UTF-8'));
-        echo "<div class='response'><div class='role'><strong>" . $escapedRole . "</strong></div><div class='message'>" . $escapedContent . "</div></div>";
-      }
-    } else {
-      echo "<div>Error retrieving response from API.</div>";
-    }
-    die();
-  }
-} else if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
-  session_destroy();
-}
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://unpkg.com/htmx.org@1.9.11"></script>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>" />
   <style>
     * {
       margin: 0;
@@ -106,6 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       font-family: sans-serif;
       max-width: 1024px;
       margin: auto;
+      background-color: black;
+      color: white;
     }
 
     header {
@@ -122,13 +65,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       justify-content: space-between;
       align-items: center;
       list-style: none;
-    }
-
-    header menu button {
-      border: 1px solid black;
-      border-radius: 5px;
-      padding: 0.25rem;
-      font-size: 1rem;
     }
 
     header h1 {
@@ -151,7 +87,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     form #input {
-      border: 1px solid black;
+      border: 1px solid white;
+      background-color: black;
+      color: white;
       border-radius: 5px;
       padding: 0.25rem;
       flex: 1;
@@ -160,11 +98,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       font-family: sans-serif;
     }
 
-    form #submit {
-      border: 1px solid black;
+    button {
+      border: 1px solid white;
+      background-color: black;
+      color: white;
       border-radius: 5px;
       padding: 0.25rem;
       font-size: 1rem;
+    }
+
+    button:disabled,
+    button[disabled] {
+      border: 1px solid darkgray;
+      background-color: dimgray;
+      color: darkgray;
     }
 
     #response-container {
@@ -175,12 +122,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       gap: 0.5rem;
       width: 100%;
       overflow-y: scroll;
-      border: 1px solid black;
+      border: 1px solid white;
       border-radius: 5px;
     }
 
     .response {
-      border: 1px solid black;
+      border: 1px solid white;
       border-radius: 5px;
       padding: 0.25rem;
       display: flex;
@@ -204,12 +151,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     #spinner {
       display: none;
     }
-
-    #spinner.htmx-request {
-      display: block;
-    }
   </style>
-  <title>AI CHAT</title>
+  <title>chat.giving</title>
 </head>
 
 <body>
@@ -221,10 +164,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </button>
       </li>
       <li>
-        <h1>AI CHAT</h1>
+        <h1>chat.giving</h1>
       </li>
       <li>
-        <button hx-on:click="document.getElementById('response-container').innerHTML = ''" hx-delete="index.php" hx-swap="none">
+        <button disabled>
           <span>New</span>
         </button>
       </li>
@@ -242,11 +185,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
       ?>
     </section>
-    <form hx-post="index.php" hx-target="#response-container" hx-swap="innerHTML" hx-on::before-request="const input = document.getElementById('input');console.log(input.value); const submit = document.getElementById('submit'); input.disabled = true; input.value = ''; input.placeholder = 'Loading...'; submit.disabled = true;" hx-on::after-request="const input = document.getElementById('input'); const submit = document.getElementById('submit'); input.disabled = false; input.placeholder = 'Type a message'; submit.disabled = false; input.focus();">
+    <form>
       <textarea name="message" id="input" placeholder="Type a message"></textarea>
       <button type="submit" id="submit">
         <span>Send</span>
-        </div>
+      </button>
     </form>
   </main>
 </body>
