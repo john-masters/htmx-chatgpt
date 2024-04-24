@@ -1,11 +1,6 @@
 <?php
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  require __DIR__ . '/vendor/autoload.php';
-
-  $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
-  $dotenv->load();
-
   $obj = json_decode(file_get_contents('php://input'));
 
   $api_key = $_ENV['OPENAI_API_KEY'];
