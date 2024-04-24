@@ -5,9 +5,7 @@ require __DIR__ . '/vendor/autoload.php';
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
-$data = json_decode(file_get_contents('php://input'));
-
-$message = $data->message;
+$obj = json_decode(file_get_contents('php://input'));
 
 $api_key = $_ENV['OPENAI_API_KEY'];
 $api_endpoint = "https://api.openai.com/v1/chat/completions";
@@ -19,16 +17,7 @@ $headers = [
 
 $payload = json_encode([
   "model" => "gpt-4",
-  "messages" => [
-    [
-      "role" => "system",
-      "content" => "You are a helpful assistant."
-    ],
-    [
-      "role" => "user",
-      "content" => $message
-    ]
-  ],
+  "messages" => $obj->messages,
   "stream" => true
 ]);
 
@@ -49,7 +38,7 @@ curl_setopt($ch, CURLOPT_WRITEFUNCTION, function ($curl, $data) {
         $jsonData = json_decode(substr($chunk, 6), true);
         if ($jsonData && isset($jsonData['choices'][0]['delta']['content'])) {
           $content = $jsonData['choices'][0]['delta']['content'];
-          echo $content;
+          echo nl2br($content);
           ob_flush();
           flush();
         }

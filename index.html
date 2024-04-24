@@ -134,11 +134,19 @@
     </style>
     <script defer>
       document.addEventListener("DOMContentLoaded", () => {
+        let messages = JSON.parse(localStorage.getItem("chats")) || [
+          { role: "system", content: "You are a helpful assistant." },
+        ];
+
         document
           .querySelector("form")
           .addEventListener("submit", async (event) => {
             event.preventDefault();
             if (!event.target.message.value) return;
+            messages.push({
+              role: "user",
+              content: event.target.message.value,
+            });
 
             const responseContainer = document.querySelector(
               "#response-container"
@@ -167,10 +175,11 @@
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                message: event.target.message.value,
+                messages: messages,
               }),
             });
-            // handle streamed response
+            event.target.message.value = "";
+
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
 
@@ -197,10 +206,11 @@
                 break;
               }
               const text = decoder.decode(value);
-              console.log(text);
-              messageDiv.textContent += text;
+              console.log("text", text);
+              messageDiv.innerHTML += text;
             }
-            console.log(messageDiv.textContent);
+            // console.log(messageDiv.textContent);
+            localStorage.setItem("messages", JSON.stringify(messages));
           });
       });
     </script>
